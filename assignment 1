@@ -1,0 +1,165 @@
+-- a person is Male or Female, Abdicated, Dead or Alive, and has a name
+data Sex = Male | Female deriving (Eq, Show)
+data Status = Alive | Dead | Abdicated deriving (Eq, Show)
+data Person = Person Sex Status String deriving (Eq, Show)
+-- a Dynasty is headed by a Person and indicates the descendants
+-- oldest first; a Dull Person doesn't have any recorded descendants
+data Dynasty =
+        Descend Person [Dynasty] | Dull Person deriving (Eq, Show)
+
+-- a list of the successors of a person
+successors :: String -> Dynasty -> [String]
+successors name dynasty = aliveafter name (linefrom(dynasty))
+
+-- the list of all Persons in order of succession in Dynasty dy
+linefrom :: Dynasty -> [Person]
+linefrom dy = (getperson (reorder dy)):[] ++ concat (map linefrom (filter (\d -> ((getdystatus d) /= Abdicated)) ((getoffspring.reorder) dy)))
+
+-- to return the status of a person with the type Dynasty
+getdystatus :: Dynasty -> Status
+getdystatus (Dull p) = getstatus p
+getdystatus (Descend p _) = getstatus p
+
+-- to return the status of a person
+getstatus :: Person -> Status
+getstatus (Person sex status name) = status
+
+-- to return the person of a Dynasty
+getperson :: Dynasty -> Person
+getperson (Dull p) = p
+getperson (Descend p _) = p
+
+-- to return the offspring of a person
+getoffspring :: Dynasty -> [Dynasty]
+getoffspring (Dull _) = []
+getoffspring (Descend _ ds) = ds
+
+-- arrange for any immediate descendants of dy with males before females
+reorder :: Dynasty -> Dynasty
+reorder dy = 
+        if getoffspring dy == []
+                then Dull (getperson dy)
+        else Descend (getperson dy) (sortds (getoffspring dy))
+
+-- sort dys so that males precede females, not changing the order within each sex
+sortds :: [Dynasty] -> [Dynasty]
+sortds [] = []
+sortds dys = insertd (head dys) (sortds (tail dys))
+
+-- insert dy into sorted position in dys (see sortds above)
+insertd :: Dynasty -> [Dynasty] -> [Dynasty]
+insertd dy dys = 
+        let m = filter (\d -> (getdysex d == Male)) dys
+            f = filter (\d -> (getdysex d == Female)) dys
+        in if (getdysex dy) == Male
+                   then (dy : m) ++ f
+           else m ++ (dy:f)
+
+-- to return the sex of a person with the type Dynasty
+getdysex :: Dynasty -> Sex
+getdysex (Dull p) = getsex p
+getdysex (Descend p _) = getsex p
+
+-- to return the sex of a person
+getsex :: Person -> Sex
+getsex (Person sex status name) = sex
+
+-- the names of the Alive persons in ps occurring after name
+aliveafter :: String -> [Person] -> [String]
+aliveafter _ [] = []
+aliveafter name ps = 
+        if name == (getname (head ps))
+                then alivein (tail ps)
+        else aliveafter name (tail ps)
+
+-- to return the name of a person
+getname :: Person -> String
+getname (Person sex status name) = name
+
+-- the names of the Alive persons in ps
+alivein :: [Person] -> [String]
+alivein ps = map getname (filter (\p -> ((getstatus p) == Alive)) ps)
+
+
+
+-- the example list of british royal family
+exdyn =
+    Descend (Person Male Dead "George5")
+    [
+        Descend (Person Male Abdicated "Edward8") [],
+        Descend (Person Male Dead "George6")
+        [
+            Descend (Person Female Alive "Elizabeth2")
+            [
+                Descend (Person Male Alive "Charles")
+                [
+                    Descend (Person Male Alive "William")
+                    [
+                        Descend (Person Male Alive "George") []
+                    ],
+
+                    Descend (Person Male Alive "Harry") []
+
+                ],
+
+                Descend (Person Female Alive "Anne")
+
+                [
+
+                    Descend (Person Male Alive "Peter")
+
+                    [
+
+                        Dull (Person Female Alive "Savannah"),
+
+                        Dull (Person Female Alive "Isla")
+
+                    ],
+
+                    Dull (Person Female Alive "Zarah")
+
+                ],
+
+                Descend (Person Male Alive "Andrew")
+
+                [
+
+                    Dull (Person Female Alive "Beatrice"),
+
+                    Dull (Person Female Alive "Eugenie")
+
+                ],
+
+                Descend (Person Male Alive "Edward")
+
+                [
+
+                    Dull (Person Female Alive "Louise"),
+
+                    Dull (Person Male Alive "James")
+
+                ]
+
+            ],
+
+            Descend (Person Female Dead "Margaret")
+
+            [
+
+                Dull (Person Male Alive "David"),
+
+                Dull (Person Female Alive "Sarah")
+
+            ]
+
+        ],
+
+        Dull (Person Female Dead "Mary"),
+
+        Dull (Person Male Dead "Henry"),
+
+        Dull (Person Male Dead "George"),
+
+        Dull (Person Male Dead "John")
+
+    ]
